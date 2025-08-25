@@ -7,7 +7,6 @@
     
     // Глобальные переменные
     const flightTime = 1; // время полета в секундах
-    const squareSize = 5; // размер квадратика в процентах
     const spawnDistance = 1.5; // расстояние спавна от края экрана (множитель)
 
     // Массив для хранения активных квадратиков
@@ -40,12 +39,14 @@
         square.style.transition = `left ${transitionTime}s linear`;
         square.style.left = square.style.left === '90%' ? '0%' : '90%';
 
+        // for (let i =0; i<10; i++){
         if (angle >= 360) angle = 0;
         // spawnSquare(90);
         spawnSquare(angle);
         // spawnSquare(180);
         // spawnSquare(270);
         angle += 10;
+        // }
         // testSpawnCircle();
     }
 
@@ -56,8 +57,9 @@
         // Создаем элемент квадратика
         const squareElement = document.createElement('div');
         squareElement.className = 'flying-square';
-        squareElement.style.width = `${squareSize}%`;
-        squareElement.style.height = `${squareSize}%`;
+        
+        squareElement.style.width = `8vh`;
+        squareElement.style.height = `5vh`;
         squareElement.style.backgroundColor = 'white';
         squareElement.style.position = 'fixed';
         squareElement.style.borderRadius = '3px';
@@ -84,13 +86,18 @@
         // Добавляем на страницу
         document.body.appendChild(squareElement);
         
-        // Анимируем движение
-        squareElement.style.transition = `all ${flightTime}s linear`;
+        // Ключевое исправление: используем requestAnimationFrame для гарантии
+        // что элемент отрендерится перед началом анимации
         squareElement.style.transform = `translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
-        setTimeout(() => {
-            squareElement.style.left = `${targetX}px`;
-            squareElement.style.top = `${targetY}px`;
-        }, 1);
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                // Устанавливаем transition и конечные стили
+                squareElement.style.transition = `all ${flightTime}s linear`;
+                squareElement.style.left = `${targetX}px`;
+                squareElement.style.top = `${targetY}px`;
+            });
+        });
         
         // Добавляем в массив активных квадратиков
         const id = squareId++;
