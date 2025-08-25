@@ -14,7 +14,8 @@
         id: number,
         angle: number,
         element: HTMLDivElement,
-        progress: number
+        progress: number,
+        creationTime: number // добавляем поле для времени создания
     }> = [];
     let squareId = 0;
 
@@ -57,7 +58,7 @@
         // Создаем элемент квадратика
         const squareElement = document.createElement('div');
         squareElement.className = 'flying-square';
-        
+
         squareElement.style.width = `8vh`;
         squareElement.style.height = `5vh`;
         squareElement.style.backgroundColor = 'white';
@@ -83,13 +84,16 @@
         squareElement.style.top = `${spawnY}px`;
         squareElement.style.transform = 'translate(-50%, -50%)';
         
+        // Записываем время создания
+        const creationTime = performance.now();
+        console.log(`Квадрат ${squareId} создан в: ${creationTime.toFixed(2)}ms`);
+        
         // Добавляем на страницу
         document.body.appendChild(squareElement);
         
         // Ключевое исправление: используем requestAnimationFrame для гарантии
         // что элемент отрендерится перед началом анимации
         squareElement.style.transform = `translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
-
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 // Устанавливаем transition и конечные стили
@@ -98,23 +102,30 @@
                 squareElement.style.top = `${targetY}px`;
             });
         });
-        
+
         // Добавляем в массив активных квадратиков
         const id = squareId++;
         activeSquares.push({
             id,
             angle: targetAngle,
             element: squareElement,
-            progress: 0
+            progress: 0,
+            creationTime // сохраняем время создания
         });
-        
+
         // Удаляем после завершения анимации
         setTimeout(() => {
+            const removalTime = performance.now();
+            const lifetime = removalTime - creationTime;
+
+            console.log(`Квадрат ${id} удален в: ${removalTime.toFixed(2)}ms`);
+            console.log(`Время жизни квадрата ${id}: ${lifetime.toFixed(2)}ms (ожидалось: ${flightTime * 1000}ms)`);
+
             if (squareElement.parentNode) {
                 squareElement.parentNode.removeChild(squareElement);
             }
             activeSquares = activeSquares.filter(sq => sq.id !== id);
-        }, flightTime * 1000 + 100);
+        }, flightTime * 1000);
     }
 
     // Функция для тестирования - спавнит квадратики по кругу
