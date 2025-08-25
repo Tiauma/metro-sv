@@ -9,15 +9,61 @@
     const flightTime = 1; // время полета в секундах
     const spawnDistance = 1.5; // расстояние спавна от края экрана (множитель)
 
-    // Массив для хранения активных квадратиков
-    let activeSquares: Array<{
+    // Массив для хранения активных элементов
+    let activeElements: Array<{
         id: number,
-        angle: number,
         element: HTMLDivElement,
-        progress: number,
-        creationTime: number // добавляем поле для времени создания
+        creationTime: number
     }> = [];
-    let squareId = 0;
+    let elementId = 0;
+
+    // Универсальная функция для анимации элемента
+    function animateElement(
+        element: HTMLDivElement, 
+        targetAngle: number, 
+        onComplete?: () => void
+    ): () => void {
+        const screenWidth = window.innerWidth;
+        
+        // Вычисляем конечную позицию (точка на круге)
+        const circleRadius = 25 * window.innerHeight / 100;
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        
+        const targetRadians = ((360 - targetAngle) * Math.PI) / 180;
+        const targetX = centerX + circleRadius * Math.cos(targetRadians);
+        const targetY = centerY + circleRadius * Math.sin(targetRadians);
+        
+        // Вычисляем начальную позицию (вне экрана)
+        const spawnX = centerX + screenWidth * spawnDistance * Math.cos(targetRadians);
+        const spawnY = centerY + screenWidth * spawnDistance * Math.sin(targetRadians);
+        
+        // Устанавливаем начальную позицию
+        element.style.position = 'fixed';
+        element.style.left = `${spawnX}px`;
+        element.style.top = `${spawnY}px`;
+        element.style.transform = 'translate(-50%, -50%)';
+        
+        // Добавляем на страницу
+        document.body.appendChild(element);
+        
+        element.style.transform = `translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
+        // Анимируем элемент к целевой позиции
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                element.style.transition = `all ${flightTime}s linear`;
+                element.style.left = `${targetX}px`;
+                element.style.top = `${targetY}px`;
+            });
+        });
+
+        // Возвращаем функцию для отмены анимации
+        return () => {
+            if (element.parentNode) {
+                element.parentNode.removeChild(element);
+            }
+        };
+    }
 
     function rotateContainer(e: MouseEvent) {
         if (!container) return;
@@ -40,77 +86,41 @@
         square.style.transition = `left ${transitionTime}s linear`;
         square.style.left = square.style.left === '90%' ? '0%' : '90%';
 
-        // for (let i =0; i<10; i++){
         if (angle >= 360) angle = 0;
-        // spawnSquare(90);
         spawnSquare(angle);
-        // spawnSquare(180);
-        // spawnSquare(270);
         angle += 10;
-        // }
-        // testSpawnCircle();
     }
 
-    // Функция для спавна квадратика
+    // Функция для спавна квадратика (использует универсальную функцию)
     function spawnSquare(targetAngle: number) {
-        const screenWidth = window.innerWidth;
-        
         // Создаем элемент квадратика
         const squareElement = document.createElement('div');
         squareElement.className = 'flying-square';
-
         squareElement.style.width = `8vh`;
         squareElement.style.height = `5vh`;
         squareElement.style.backgroundColor = 'white';
-        squareElement.style.position = 'fixed';
         squareElement.style.borderRadius = '3px';
         squareElement.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.5)';
-        
-        // Вычисляем конечную позицию (точка на круге)
-        const circleRadius = 25 * window.innerHeight / 100; // 50vh / 2
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
-        
-        const targetRadians = ((360 - targetAngle) * Math.PI) / 180;
-        const targetX = centerX + circleRadius * Math.cos(targetRadians);
-        const targetY = centerY + circleRadius * Math.sin(targetRadians);
-        
-        // Вычисляем начальную позицию (вне экрана)
-        const spawnX = centerX + screenWidth * spawnDistance * Math.cos(targetRadians);
-        const spawnY = centerY + screenWidth * spawnDistance * Math.sin(targetRadians);
-        
-        // Устанавливаем начальную позицию
-        squareElement.style.left = `${spawnX}px`;
-        squareElement.style.top = `${spawnY}px`;
-        squareElement.style.transform = 'translate(-50%, -50%)';
+        squareElement.style.zIndex = '10';
         
         // Записываем время создания
         const creationTime = performance.now();
-        console.log(`Квадрат ${squareId} создан в: ${creationTime.toFixed(2)}ms`);
+        const id = elementId++;
         
-        // Добавляем на страницу
-        document.body.appendChild(squareElement);
+        // Анимируем элемент
+        const cancelAnimation = animateElement(
+            squareElement, 
+            targetAngle,
+            () => {
+                console.log(`Элемент ${id} достиг цели`);
+            }
+        );
         
-        // Ключевое исправление: используем requestAnimationFrame для гарантии
-        // что элемент отрендерится перед началом анимации
-        squareElement.style.transform = `translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                // Устанавливаем transition и конечные стили
-                squareElement.style.transition = `all ${flightTime}s linear`;
-                squareElement.style.left = `${targetX}px`;
-                squareElement.style.top = `${targetY}px`;
-            });
-        });
-
-        // Добавляем в массив активных квадратиков
-        const id = squareId++;
-        activeSquares.push({
+        // Добавляем в массив активных элементов
+        activeElements.push({
             id,
-            angle: targetAngle,
             element: squareElement,
-            progress: 0,
-            creationTime // сохраняем время создания
+            creationTime
         });
 
         // Удаляем после завершения анимации
@@ -118,13 +128,11 @@
             const removalTime = performance.now();
             const lifetime = removalTime - creationTime;
 
-            console.log(`Квадрат ${id} удален в: ${removalTime.toFixed(2)}ms`);
-            console.log(`Время жизни квадрата ${id}: ${lifetime.toFixed(2)}ms (ожидалось: ${flightTime * 1000}ms)`);
+            console.log(`Элемент ${id} удален в: ${removalTime.toFixed(2)}ms`);
+            console.log(`Время жизни элемента ${id}: ${lifetime.toFixed(2)}ms`);
 
-            if (squareElement.parentNode) {
-                squareElement.parentNode.removeChild(squareElement);
-            }
-            activeSquares = activeSquares.filter(sq => sq.id !== id);
+            cancelAnimation();
+            activeElements = activeElements.filter(el => el.id !== id);
         }, flightTime * 1000);
     }
 
@@ -143,18 +151,20 @@
         // Экспортируем функцию спавна в глобальную область
         (window as any).spawnSquare = spawnSquare;
         (window as any).testSpawn = testSpawnCircle;
+        (window as any).animateElement = animateElement;
 
         // Очистка при размонтировании компонента
         return () => {
             document.removeEventListener('mousemove', rotateContainer);
             document.removeEventListener('click', handleLeftClick);
-            activeSquares.forEach(sq => {
-                if (sq.element.parentNode) {
-                    sq.element.parentNode.removeChild(sq.element);
+            activeElements.forEach(el => {
+                if (el.element.parentNode) {
+                    el.element.parentNode.removeChild(el.element);
                 }
             });
             delete (window as any).spawnSquare;
             delete (window as any).testSpawn;
+            delete (window as any).animateElement;
         };
     });
 </script>
@@ -225,10 +235,5 @@
         display: flex;
         justify-content: center;
         align-items: center;
-    }
-
-    /* Стили для летающих квадратиков */
-    .flying-square {
-        z-index: 10;
     }
 </style>
