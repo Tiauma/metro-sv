@@ -7,7 +7,7 @@
     
     // Глобальные переменные
     const flightTime = 1; // время полета в секундах
-    const spawnDistance = 1.5; // расстояние спавна от края экрана (множитель)
+    let spawnDistance = 1.5; // будет рассчитываться динамически
 
     // Массив для хранения активных элементов
     let activeElements: Array<{
@@ -17,6 +17,18 @@
     }> = [];
     let elementId = 0;
 
+    // Функция для расчета spawnDistance в зависимости от размера экрана
+    function calculateSpawnDistance(): number {
+        const baseScreenWidth = 1920;
+        const baseSpawnDistance = 0.8;
+        
+        // Прямая пропорция: чем меньше экран, тем больше spawnDistance
+        const scaleFactor = baseScreenWidth / window.innerWidth;
+        
+        // Ограничиваем максимальное увеличение
+        return baseSpawnDistance * Math.min(scaleFactor, 2.5);
+    }
+
     // Универсальная функция для анимации элемента
     function animateElement(
         element: HTMLDivElement, 
@@ -24,19 +36,33 @@
         onComplete?: () => void
     ): () => void {
         const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
         
         // Вычисляем конечную позицию (точка на круге)
-        const circleRadius = 25 * window.innerHeight / 100;
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
+        const circleRadius = 25 * screenHeight / 100;
+        const centerX = screenWidth / 2;
+        const centerY = screenHeight / 2;
         
         const targetRadians = ((360 - targetAngle) * Math.PI) / 180;
         const targetX = centerX + circleRadius * Math.cos(targetRadians);
         const targetY = centerY + circleRadius * Math.sin(targetRadians);
         
+        // Рассчитываем spawnDistance динамически
+        spawnDistance = calculateSpawnDistance();
+        
         // Вычисляем начальную позицию (вне экрана)
         const spawnX = centerX + screenWidth * spawnDistance * Math.cos(targetRadians);
         const spawnY = centerY + screenWidth * spawnDistance * Math.sin(targetRadians);
+        
+        // Рассчитываем фактическое расстояние, которое пролетит элемент
+        const distance = Math.sqrt(
+            Math.pow(targetX - spawnX, 2) + Math.pow(targetY - spawnY, 2)
+        );
+        
+        // Рассчитываем требуемую скорость (пикселей в секунду)
+        const requiredSpeed = distance / flightTime;
+        
+        console.log(`Экран: ${screenWidth}x${screenHeight}, Расстояние: ${distance.toFixed(2)}px, Скорость: ${requiredSpeed.toFixed(2)}px/сек`);
         
         // Устанавливаем начальную позицию
         element.style.position = 'fixed';
@@ -48,6 +74,7 @@
         document.body.appendChild(element);
         
         element.style.transform = `translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
+        
         // Анимируем элемент к целевой позиции
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
@@ -144,9 +171,17 @@
     }
 
     onMount(() => {
+        // Пересчитываем spawnDistance при монтировании
+        spawnDistance = calculateSpawnDistance();
+        
         // Добавляем обработчики событий после монтирования компонента
         document.addEventListener('mousemove', rotateContainer);
         document.addEventListener('click', handleLeftClick);
+
+        // Также пересчитываем при изменении размера окна
+        window.addEventListener('resize', () => {
+            spawnDistance = calculateSpawnDistance();
+        });
 
         // Экспортируем функцию спавна в глобальную область
         (window as any).spawnSquare = spawnSquare;
@@ -157,6 +192,9 @@
         return () => {
             document.removeEventListener('mousemove', rotateContainer);
             document.removeEventListener('click', handleLeftClick);
+            window.removeEventListener('resize', () => {
+                spawnDistance = calculateSpawnDistance();
+            });
             activeElements.forEach(el => {
                 if (el.element.parentNode) {
                     el.element.parentNode.removeChild(el.element);
@@ -169,6 +207,7 @@
     });
 </script>
 
+<!-- Остальная часть компонента без изменений -->
 <svelte:head>
     <title>Rhythm Game</title>
 </svelte:head>
