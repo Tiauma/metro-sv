@@ -68,7 +68,7 @@
         const centerX = window.innerWidth / 2;
         const centerY = window.innerHeight / 2;
         
-        const targetRadians = (targetAngle * Math.PI) / 180;
+        const targetRadians = ((360 - targetAngle) * Math.PI) / 180;
         const targetX = centerX + circleRadius * Math.cos(targetRadians);
         const targetY = centerY + circleRadius * Math.sin(targetRadians);
         
@@ -86,10 +86,11 @@
         
         // Анимируем движение
         squareElement.style.transition = `all ${flightTime}s linear`;
+        squareElement.style.transform = `translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
         setTimeout(() => {
             squareElement.style.left = `${targetX}px`;
             squareElement.style.top = `${targetY}px`;
-        }, 10);
+        }, 1);
         
         // Добавляем в массив активных квадратиков
         const id = squareId++;
