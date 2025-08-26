@@ -17,16 +17,26 @@
     }> = [];
     let elementId = 0;
 
-    // Функция для расчета spawnDistance в зависимости от размера экрана
+    // Размеры игровой области (в пикселях)
+    let gameAreaWidth = 0;
+    let gameAreaHeight = 0;
+    let circleRadius = 0;
+
+    // Функция для расчета размеров игровой области
+    function updateGameAreaSize(): void {
+        const circleElement = document.querySelector('.circle') as HTMLElement;
+        if (circleElement) {
+            const rect = circleElement.getBoundingClientRect();
+            gameAreaWidth = rect.width;
+            gameAreaHeight = rect.height;
+            circleRadius = gameAreaWidth / 2; // Круг всегда квадратный
+        }
+    }
+
+    // Функция для расчета spawnDistance
     function calculateSpawnDistance(): number {
-        const baseScreenWidth = 1920;
-        const baseSpawnDistance = 0.8;
-        
-        // Прямая пропорция: чем меньше экран, тем больше spawnDistance
-        const scaleFactor = baseScreenWidth / window.innerWidth;
-        
-        // Ограничиваем максимальное увеличение
-        return baseSpawnDistance * Math.min(scaleFactor, 2.5);
+        // Используем фиксированное расстояние от края круга
+        return 3; // 120% от радиуса круга
     }
 
     // Универсальная функция для анимации элемента
@@ -35,24 +45,25 @@
         targetAngle: number, 
         onComplete?: () => void
     ): () => void {
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
+        updateGameAreaSize();
         
-        // Вычисляем конечную позицию (точка на круге)
-        const circleRadius = 25 * screenHeight / 100;
-        const centerX = screenWidth / 2;
-        const centerY = screenHeight / 2;
+        // Центр игровой области (относительно viewport)
+        const circleElement = document.querySelector('.circle') as HTMLElement;
+        const circleRect = circleElement.getBoundingClientRect();
+        const centerX = circleRect.left + circleRect.width / 2;
+        const centerY = circleRect.top + circleRect.height / 2;
         
+        // Вычисляем конечную позицию (точка на краю круга)
         const targetRadians = ((360 - targetAngle) * Math.PI) / 180;
         const targetX = centerX + circleRadius * Math.cos(targetRadians);
         const targetY = centerY + circleRadius * Math.sin(targetRadians);
         
-        // Рассчитываем spawnDistance динамически
+        // Рассчитываем spawnDistance
         spawnDistance = calculateSpawnDistance();
         
-        // Вычисляем начальную позицию (вне экрана)
-        const spawnX = centerX + screenWidth * spawnDistance * Math.cos(targetRadians);
-        const spawnY = centerY + screenWidth * spawnDistance * Math.sin(targetRadians);
+        // Вычисляем начальную позицию (вне круга)
+        const spawnX = centerX + circleRadius * spawnDistance * Math.cos(targetRadians);
+        const spawnY = centerY + circleRadius * spawnDistance * Math.sin(targetRadians);
         
         // Рассчитываем фактическое расстояние, которое пролетит элемент
         const distance = Math.sqrt(
@@ -62,7 +73,7 @@
         // Рассчитываем требуемую скорость (пикселей в секунду)
         const requiredSpeed = distance / flightTime;
         
-        console.log(`Экран: ${screenWidth}x${screenHeight}, Расстояние: ${distance.toFixed(2)}px, Скорость: ${requiredSpeed.toFixed(2)}px/сек`);
+        console.log(`Игровая область: ${gameAreaWidth}x${gameAreaHeight}, Расстояние: ${distance.toFixed(2)}px, Скорость: ${requiredSpeed.toFixed(2)}px/сек`);
         
         // Устанавливаем начальную позицию
         element.style.position = 'fixed';
@@ -115,10 +126,10 @@
 
         if (angle >= 360) angle = 0;
         spawnSquare(angle);
-        angle += 10;
+        angle += 30;
     }
 
-    // Функция для спавна квадратика (использует универсальную функцию)
+    // Функция для спавна квадратика
     function spawnSquare(targetAngle: number) {
         // Создаем элемент квадратика
         const squareElement = document.createElement('div');
@@ -163,7 +174,7 @@
         }, flightTime * 1000);
     }
 
-    // Функция для тестирования - спавнит квадратики по кругу
+    // Функция для тестирования
     function testSpawnCircle() {
         for (let i = 0; i < 360; i += 30) {
             setTimeout(() => spawnSquare(i), i * 10);
@@ -171,30 +182,26 @@
     }
 
     onMount(() => {
-        // Пересчитываем spawnDistance при монтировании
+        // Инициализируем размеры игровой области
+        updateGameAreaSize();
         spawnDistance = calculateSpawnDistance();
         
-        // Добавляем обработчики событий после монтирования компонента
+        // Добавляем обработчики событий
         document.addEventListener('mousemove', rotateContainer);
         document.addEventListener('click', handleLeftClick);
 
-        // Также пересчитываем при изменении размера окна
-        window.addEventListener('resize', () => {
-            spawnDistance = calculateSpawnDistance();
-        });
+        // Обновляем размеры при изменении размера окна
+        window.addEventListener('resize', updateGameAreaSize);
 
-        // Экспортируем функцию спавна в глобальную область
+        // Экспортируем функции
         (window as any).spawnSquare = spawnSquare;
         (window as any).testSpawn = testSpawnCircle;
-        (window as any).animateElement = animateElement;
 
-        // Очистка при размонтировании компонента
+        // Очистка при размонтировании
         return () => {
             document.removeEventListener('mousemove', rotateContainer);
             document.removeEventListener('click', handleLeftClick);
-            window.removeEventListener('resize', () => {
-                spawnDistance = calculateSpawnDistance();
-            });
+            window.removeEventListener('resize', updateGameAreaSize);
             activeElements.forEach(el => {
                 if (el.element.parentNode) {
                     el.element.parentNode.removeChild(el.element);
@@ -202,7 +209,6 @@
             });
             delete (window as any).spawnSquare;
             delete (window as any).testSpawn;
-            delete (window as any).animateElement;
         };
     });
 </script>
