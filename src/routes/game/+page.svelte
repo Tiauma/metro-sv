@@ -138,7 +138,7 @@
         squareElement.style.height = `5vh`;
         squareElement.style.backgroundColor = 'white';
         squareElement.style.borderRadius = '0.3vh';
-        squareElement.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.5)';
+        squareElement.style.boxShadow = '0 0 0.5vh rgba(255, 255, 255, 0.5)';
         squareElement.style.zIndex = '10';
         
         // Записываем время создания
