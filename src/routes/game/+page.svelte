@@ -137,7 +137,7 @@
         squareElement.style.width = `8vh`;
         squareElement.style.height = `5vh`;
         squareElement.style.backgroundColor = 'white';
-        squareElement.style.borderRadius = '3px';
+        squareElement.style.borderRadius = '0.3vh';
         squareElement.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.5)';
         squareElement.style.zIndex = '10';
         
@@ -252,12 +252,12 @@
         height: 8vh;
         position: relative;
         background-color: #333;
-        border: 2px solid #555;
-        border-left: 2px dotted #555;
+        border: 0.2vh solid #555; /* Используем vh вместо px */
+        border-left: 0.2vh dotted #555; /* Используем vh вместо px */
         overflow: hidden;
         transform-origin: center center;
-        border-radius: 17px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        border-radius: 1.7vh; /* Адаптируем border-radius */
+        box-shadow: 0 0.4vh 1.5vh rgba(0, 0, 0, 0.3); /* Адаптируем тень */
     }
 
     .square {
@@ -268,14 +268,14 @@
         left: 0;
         top: 0;
         transition: left 0.05s linear;
-        border-radius: 3px;
+        border-radius: 0.3vh;
     }
 
     .circle {
         width: 50vh;
         height: 50vh;
         border-radius: 50%;
-        border: 2px solid rgba(255, 255, 255, 0.2);
+        border: 0.2vh solid rgba(255, 255, 255, 0.2);
         position: absolute;
         display: flex;
         justify-content: center;
