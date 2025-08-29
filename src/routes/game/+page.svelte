@@ -126,8 +126,8 @@
         const transitionTime = 0.5;
         square.style.transition = `left ${transitionTime}s linear`;
         square.style.left = square.style.left === "90%" ? "0%" : "90%";
-        spawnSlider(0,90,0.5)
-        // testSpawnCircle();
+        spawnSlider(0, 90, 0.5);
+        testSpawnCircle();
     }
 
     // Получение свободного элемента из пула
@@ -169,13 +169,16 @@
         }
     }
 
-    // Спавн квадратика
-    function spawnSquare(targetAngle: number) {
+    // Спавн квадратика с поддержкой цвета
+    function spawnSquare(targetAngle: number, color: string = "white") {
         const pooled = getPooledElement();
         if (!pooled) return;
 
         const element = pooled.element;
         const id = pooled.id;
+
+        // Устанавливаем цвет квадратика
+        element.style.backgroundColor = color;
 
         // Анимация
         animateElement(element, targetAngle, () => {
@@ -187,22 +190,26 @@
             returnToPool(id);
         }, flightTime * 1000);
     }
-    // Функция для создания слайдера между двумя углами
-    function spawnSlider(startAngle: number, endAngle: number, duration: number) {
+
+    // Функция для создания слайдера между двумя углами с голубым цветом
+    function spawnSlider(
+        startAngle: number,
+        endAngle: number,
+        duration: number,
+    ) {
         const angleDiff = endAngle - startAngle;
-        const stepCount = Math.floor(duration * 1000 / 30); // количество шагов (примерно 30ms между квадратиками)
+        const stepCount = Math.floor((duration * 1000) / 30); // количество шагов (примерно 30ms между квадратиками)
         const angleStep = angleDiff / stepCount;
 
         for (let i = 0; i <= stepCount; i++) {
             const currentAngle = startAngle + angleStep * i;
-            setTimeout(() => spawnSquare(currentAngle), i * 30);
+            setTimeout(() => spawnSquare(currentAngle, "#5d76cb"), i * 30); // голубой цвет
         }
     }
 
-
     function testSpawnCircle() {
         for (let i = 0; i < 60; i += 7) {
-            setTimeout(() => spawnSquare(i), i * 10);
+            setTimeout(() => spawnSquare(i, "white"), i * 10); // белый цвет
         }
     }
 
@@ -274,7 +281,7 @@
 
         // Глобальные отладочные функции
         // В onMount добавьте:
-(window as any).spawnSlider = spawnSlider;
+        (window as any).spawnSlider = spawnSlider;
         (window as any).spawnSquare = spawnSquare;
         (window as any).testSpawn = testSpawnCircle;
         (window as any).showVisibilityLog = showVisibilityLog; // новая функция для просмотра лога
@@ -292,7 +299,7 @@
             });
 
             // В cleanup добавьте:
-delete (window as any).spawnSlider;
+            delete (window as any).spawnSlider;
             delete (window as any).spawnSquare;
             delete (window as any).testSpawn;
             delete (window as any).showVisibilityLog;
