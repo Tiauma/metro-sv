@@ -14,11 +14,15 @@
     let gameAreaHeight = 0;
     let circleRadius = 0;
 
+    // Логирование времени видимости квадратиков
+    const visibilityLog: {id: number, spawnTime: number, visibleTime: number}[] = [];
+
     // Пул объектов
     type PooledElement = {
         element: HTMLDivElement;
         active: boolean;
         id: number;
+        spawnTime: number; // время появления квадратика
     };
 
     let pool: PooledElement[] = [];
@@ -118,14 +122,7 @@
         square.style.transition = `left ${transitionTime}s linear`;
         square.style.left = square.style.left === '90%' ? '0%' : '90%';
 
-        // Спавн 80 квадратиков с задержкой
-        for (let i = 0; i < 80; i++) {
-            const currentAngle = angle % 360;
-            ((currentAngle) => {
-                setTimeout(() => spawnSquare(currentAngle), i * 30);
-            })(currentAngle);
-            angle += 3;
-        }
+        testSpawnCircle();
     }
 
     // Получение свободного элемента из пула
@@ -133,6 +130,7 @@
         for (let i = 0; i < pool.length; i++) {
             if (!pool[i].active) {
                 pool[i].active = true;
+                pool[i].spawnTime = Date.now(); // записываем время появления
                 return pool[i];
             }
         }
@@ -145,6 +143,18 @@
     function returnToPool(id: number) {
         const item = pool.find(p => p.id === id);
         if (item) {
+            const visibleTime = (Date.now() - item.spawnTime) / 1000; // время видимости в секундах
+            
+            // Логируем время видимости
+            visibilityLog.push({
+                id: item.id,
+                spawnTime: item.spawnTime,
+                visibleTime: visibleTime
+            });
+
+            // Выводим информацию в консоль
+            console.log(`Квадратик ${id} был виден ${visibleTime.toFixed(3)} секунд (должно быть: ${flightTime} секунд)`);
+            
             item.active = false;
             // Сброс transition, чтобы не мешал
             item.element.style.transition = 'none';
@@ -172,8 +182,29 @@
     }
 
     function testSpawnCircle() {
-        for (let i = 0; i < 360; i += 30) {
+        for (let i = 0; i < 60; i += 7) {
             setTimeout(() => spawnSquare(i), i * 10);
+        }
+    }
+
+    // Функция для просмотра лога видимости
+    function showVisibilityLog() {
+        console.log('=== ЛОГ ВРЕМЕНИ ВИДИМОСТИ КВАДРАТИКОВ ===');
+        visibilityLog.forEach(log => {
+            console.log(`ID: ${log.id}, Время: ${log.visibleTime.toFixed(3)}s, Ожидалось: ${flightTime}s`);
+        });
+        
+        // Статистика
+        if (visibilityLog.length > 0) {
+            const avgTime = visibilityLog.reduce((sum, log) => sum + log.visibleTime, 0) / visibilityLog.length;
+            const minTime = Math.min(...visibilityLog.map(log => log.visibleTime));
+            const maxTime = Math.max(...visibilityLog.map(log => log.visibleTime));
+            
+            console.log(`\nСтатистика (${visibilityLog.length} квадратиков):`);
+            console.log(`Среднее: ${avgTime.toFixed(3)}s`);
+            console.log(`Минимальное: ${minTime.toFixed(3)}s`);
+            console.log(`Максимальное: ${maxTime.toFixed(3)}s`);
+            console.log(`Целевое: ${flightTime}s`);
         }
     }
 
@@ -204,7 +235,8 @@
             pool.push({
                 element: div,
                 active: false,
-                id: i
+                id: i,
+                spawnTime: 0
             });
         }
 
@@ -216,6 +248,7 @@
         // Глобальные отладочные функции
         (window as any).spawnSquare = spawnSquare;
         (window as any).testSpawn = testSpawnCircle;
+        (window as any).showVisibilityLog = showVisibilityLog; // новая функция для просмотра лога
 
         return () => {
             document.removeEventListener('mousemove', rotateContainer);
@@ -231,6 +264,7 @@
 
             delete (window as any).spawnSquare;
             delete (window as any).testSpawn;
+            delete (window as any).showVisibilityLog;
         };
     });
 </script>
