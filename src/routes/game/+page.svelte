@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onMount } from "svelte";
 
     let container: HTMLDivElement;
     let square: HTMLDivElement;
@@ -15,7 +15,11 @@
     let circleRadius = 0;
 
     // Логирование времени видимости квадратиков
-    const visibilityLog: {id: number, spawnTime: number, visibleTime: number}[] = [];
+    const visibilityLog: {
+        id: number;
+        spawnTime: number;
+        visibleTime: number;
+    }[] = [];
 
     // Пул объектов
     type PooledElement = {
@@ -29,7 +33,7 @@
 
     // Функция для обновления размеров
     function updateGameAreaSize(): void {
-        const circleElement = document.querySelector('.circle') as HTMLElement;
+        const circleElement = document.querySelector(".circle") as HTMLElement;
         if (circleElement) {
             const rect = circleElement.getBoundingClientRect();
             gameAreaWidth = rect.width;
@@ -38,15 +42,14 @@
         }
     }
 
-    // Универсальная функция анимации
     function animateElement(
         element: HTMLDivElement,
         targetAngle: number,
-        onComplete?: () => void
+        onComplete?: () => void,
     ): () => void {
         updateGameAreaSize();
 
-        const circleElement = document.querySelector('.circle') as HTMLElement;
+        const circleElement = document.querySelector(".circle") as HTMLElement;
         const circleRect = circleElement.getBoundingClientRect();
         const centerX = circleRect.left + circleRect.width / 2;
         const centerY = circleRect.top + circleRect.height / 2;
@@ -56,21 +59,23 @@
         const targetY = centerY + circleRadius * Math.sin(targetRadians);
 
         const spawnDistance = 3; // 300% радиуса
-        const spawnX = centerX + circleRadius * spawnDistance * Math.cos(targetRadians);
-        const spawnY = centerY + circleRadius * spawnDistance * Math.sin(targetRadians);
+        const spawnX =
+            centerX + circleRadius * spawnDistance * Math.cos(targetRadians);
+        const spawnY =
+            centerY + circleRadius * spawnDistance * Math.sin(targetRadians);
 
         const offsetX = spawnX - window.innerWidth / 2;
         const offsetY = spawnY - window.innerHeight / 2;
 
-        // Инициализация стилей
-        element.style.position = 'fixed';
-        element.style.left = '50%';
-        element.style.top = '50%';
+        // Инициализация стилей - начинаем с прозрачного
+        element.style.position = "fixed";
+        element.style.left = "50%";
+        element.style.top = "50%";
         element.style.transform = `translate(${offsetX}px, ${offsetY}px) translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
-        element.style.transformOrigin = 'center';
-        element.style.opacity = '1';
-        element.style.pointerEvents = 'none';
-        element.style.zIndex = '10';
+        element.style.transformOrigin = "center";
+        element.style.opacity = "0"; // ← ИЗМЕНЕНО: начинаем прозрачными
+        element.style.pointerEvents = "none";
+        element.style.zIndex = "10";
 
         // Добавляем в DOM, если ещё не добавлен
         if (!element.parentNode) {
@@ -86,7 +91,7 @@
                 const targetOffsetY = targetY - window.innerHeight / 2;
 
                 element.style.transform = `translate(${targetOffsetX}px, ${targetOffsetY}px) translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
-                element.style.opacity = '0';
+                element.style.opacity = "1"; // ← ИЗМЕНЕНО: заканчиваем непрозрачными
             });
         });
 
@@ -94,8 +99,8 @@
         return () => {
             if (element.parentNode) {
                 // Не удаляем, а просто скрываем и возвращаем в пул
-                element.style.transition = 'none';
-                element.style.opacity = '0';
+                element.style.transition = "none";
+                element.style.opacity = "0";
                 // Оставляем в DOM, но неактивный
             }
         };
@@ -120,7 +125,7 @@
 
         const transitionTime = 0.5;
         square.style.transition = `left ${transitionTime}s linear`;
-        square.style.left = square.style.left === '90%' ? '0%' : '90%';
+        square.style.left = square.style.left === "90%" ? "0%" : "90%";
 
         testSpawnCircle();
     }
@@ -135,30 +140,32 @@
             }
         }
         // Если нет свободных — можно расширить пул (опционально)
-        console.warn('Pool exhausted!');
+        console.warn("Pool exhausted!");
         return null;
     }
 
     // Возврат элемента в пул
     function returnToPool(id: number) {
-        const item = pool.find(p => p.id === id);
+        const item = pool.find((p) => p.id === id);
         if (item) {
             const visibleTime = (Date.now() - item.spawnTime) / 1000; // время видимости в секундах
-            
+
             // Логируем время видимости
             visibilityLog.push({
                 id: item.id,
                 spawnTime: item.spawnTime,
-                visibleTime: visibleTime
+                visibleTime: visibleTime,
             });
 
             // Выводим информацию в консоль
-            console.log(`Квадратик ${id} был виден ${visibleTime.toFixed(3)} секунд (должно быть: ${flightTime} секунд)`);
-            
+            console.log(
+                `Квадратик ${id} был виден ${visibleTime.toFixed(3)} секунд (должно быть: ${flightTime} секунд)`,
+            );
+
             item.active = false;
             // Сброс transition, чтобы не мешал
-            item.element.style.transition = 'none';
-            item.element.style.opacity = '0';
+            item.element.style.transition = "none";
+            item.element.style.opacity = "0";
         }
     }
 
@@ -189,17 +196,25 @@
 
     // Функция для просмотра лога видимости
     function showVisibilityLog() {
-        console.log('=== ЛОГ ВРЕМЕНИ ВИДИМОСТИ КВАДРАТИКОВ ===');
-        visibilityLog.forEach(log => {
-            console.log(`ID: ${log.id}, Время: ${log.visibleTime.toFixed(3)}s, Ожидалось: ${flightTime}s`);
+        console.log("=== ЛОГ ВРЕМЕНИ ВИДИМОСТИ КВАДРАТИКОВ ===");
+        visibilityLog.forEach((log) => {
+            console.log(
+                `ID: ${log.id}, Время: ${log.visibleTime.toFixed(3)}s, Ожидалось: ${flightTime}s`,
+            );
         });
-        
+
         // Статистика
         if (visibilityLog.length > 0) {
-            const avgTime = visibilityLog.reduce((sum, log) => sum + log.visibleTime, 0) / visibilityLog.length;
-            const minTime = Math.min(...visibilityLog.map(log => log.visibleTime));
-            const maxTime = Math.max(...visibilityLog.map(log => log.visibleTime));
-            
+            const avgTime =
+                visibilityLog.reduce((sum, log) => sum + log.visibleTime, 0) /
+                visibilityLog.length;
+            const minTime = Math.min(
+                ...visibilityLog.map((log) => log.visibleTime),
+            );
+            const maxTime = Math.max(
+                ...visibilityLog.map((log) => log.visibleTime),
+            );
+
             console.log(`\nСтатистика (${visibilityLog.length} квадратиков):`);
             console.log(`Среднее: ${avgTime.toFixed(3)}s`);
             console.log(`Минимальное: ${minTime.toFixed(3)}s`);
@@ -213,13 +228,13 @@
 
         // Создание пула
         for (let i = 0; i < POOL_SIZE; i++) {
-            const div = document.createElement('div');
-            div.className = 'flying-square pooled-square';
+            const div = document.createElement("div");
+            div.className = "flying-square pooled-square";
             div.style.cssText = `
                 width: 8vh;
                 height: 5vh;
                 background-color: white;
-                border-radius: 0.3vh;
+                border-radius: 0.9vh;
                 box-shadow: 0 0 0.5vh rgba(255, 255, 255, 0.5);
                 position: fixed;
                 left: 50%;
@@ -236,14 +251,14 @@
                 element: div,
                 active: false,
                 id: i,
-                spawnTime: 0
+                spawnTime: 0,
             });
         }
 
         // Обработчики
-        document.addEventListener('mousemove', rotateContainer);
-        document.addEventListener('click', handleLeftClick);
-        window.addEventListener('resize', updateGameAreaSize);
+        document.addEventListener("mousemove", rotateContainer);
+        document.addEventListener("click", handleLeftClick);
+        window.addEventListener("resize", updateGameAreaSize);
 
         // Глобальные отладочные функции
         (window as any).spawnSquare = spawnSquare;
@@ -251,12 +266,12 @@
         (window as any).showVisibilityLog = showVisibilityLog; // новая функция для просмотра лога
 
         return () => {
-            document.removeEventListener('mousemove', rotateContainer);
-            document.removeEventListener('click', handleLeftClick);
-            window.removeEventListener('resize', updateGameAreaSize);
+            document.removeEventListener("mousemove", rotateContainer);
+            document.removeEventListener("click", handleLeftClick);
+            window.removeEventListener("resize", updateGameAreaSize);
 
             // Удаляем все из пула
-            pool.forEach(p => {
+            pool.forEach((p) => {
                 if (p.element.parentNode) {
                     p.element.parentNode.removeChild(p.element);
                 }
@@ -275,7 +290,11 @@
 
 <div class="container-wrapper">
     <div class="circle"></div>
-    <div class="container" bind:this={container} style="transform: rotate({rotationAngle}rad)">
+    <div
+        class="container"
+        bind:this={container}
+        style="transform: rotate({rotationAngle}rad)"
+    >
         <div class="square" bind:this={square}></div>
     </div>
 </div>
@@ -289,7 +308,7 @@
         align-items: center;
         background: #1a1a1a;
         overflow: hidden;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         color: white;
     }
 
