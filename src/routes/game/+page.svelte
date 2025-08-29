@@ -126,8 +126,8 @@
         const transitionTime = 0.5;
         square.style.transition = `left ${transitionTime}s linear`;
         square.style.left = square.style.left === "90%" ? "0%" : "90%";
-
-        testSpawnCircle();
+        spawnSlider(0,90,0.5)
+        // testSpawnCircle();
     }
 
     // Получение свободного элемента из пула
@@ -187,6 +187,18 @@
             returnToPool(id);
         }, flightTime * 1000);
     }
+    // Функция для создания слайдера между двумя углами
+    function spawnSlider(startAngle: number, endAngle: number, duration: number) {
+        const angleDiff = endAngle - startAngle;
+        const stepCount = Math.floor(duration * 1000 / 30); // количество шагов (примерно 30ms между квадратиками)
+        const angleStep = angleDiff / stepCount;
+
+        for (let i = 0; i <= stepCount; i++) {
+            const currentAngle = startAngle + angleStep * i;
+            setTimeout(() => spawnSquare(currentAngle), i * 30);
+        }
+    }
+
 
     function testSpawnCircle() {
         for (let i = 0; i < 60; i += 7) {
@@ -261,6 +273,8 @@
         window.addEventListener("resize", updateGameAreaSize);
 
         // Глобальные отладочные функции
+        // В onMount добавьте:
+(window as any).spawnSlider = spawnSlider;
         (window as any).spawnSquare = spawnSquare;
         (window as any).testSpawn = testSpawnCircle;
         (window as any).showVisibilityLog = showVisibilityLog; // новая функция для просмотра лога
@@ -277,6 +291,8 @@
                 }
             });
 
+            // В cleanup добавьте:
+delete (window as any).spawnSlider;
             delete (window as any).spawnSquare;
             delete (window as any).testSpawn;
             delete (window as any).showVisibilityLog;
