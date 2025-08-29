@@ -4,96 +4,95 @@
     let container: HTMLDivElement;
     let square: HTMLDivElement;
     let rotationAngle = 0;
-    
-    // Глобальные переменные
-    const flightTime = 1; // время полета в секундах
-    let spawnDistance = 1.5; // будет рассчитываться динамически
 
-    // Массив для хранения активных элементов
-    let activeElements: Array<{
-        id: number,
-        element: HTMLDivElement,
-        creationTime: number
-    }> = [];
-    let elementId = 0;
+    // Параметры
+    const flightTime = 1; // время полёта в секундах
+    const POOL_SIZE = 100; // размер пула (можно подогнать под макс. одновременных квадратов)
 
-    // Размеры игровой области (в пикселях)
+    // Игровая область
     let gameAreaWidth = 0;
     let gameAreaHeight = 0;
     let circleRadius = 0;
 
-    // Функция для расчета размеров игровой области
+    // Пул объектов
+    type PooledElement = {
+        element: HTMLDivElement;
+        active: boolean;
+        id: number;
+    };
+
+    let pool: PooledElement[] = [];
+
+    // Функция для обновления размеров
     function updateGameAreaSize(): void {
         const circleElement = document.querySelector('.circle') as HTMLElement;
         if (circleElement) {
             const rect = circleElement.getBoundingClientRect();
             gameAreaWidth = rect.width;
             gameAreaHeight = rect.height;
-            circleRadius = gameAreaWidth / 2; // Круг всегда квадратный
+            circleRadius = gameAreaWidth / 2;
         }
     }
 
-    // Функция для расчета spawnDistance
-    function calculateSpawnDistance(): number {
-        return 3; // 300% от радиуса (достаточно далеко за пределами круга)
-    }
-
-    // Универсальная функция для анимации элемента с использованием transform
+    // Универсальная функция анимации
     function animateElement(
-        element: HTMLDivElement, 
-        targetAngle: number, 
+        element: HTMLDivElement,
+        targetAngle: number,
         onComplete?: () => void
     ): () => void {
         updateGameAreaSize();
-        
+
         const circleElement = document.querySelector('.circle') as HTMLElement;
         const circleRect = circleElement.getBoundingClientRect();
         const centerX = circleRect.left + circleRect.width / 2;
         const centerY = circleRect.top + circleRect.height / 2;
-        
-        // Угол в радианах (Svelte использует 0° справа, по часовой стрелке)
+
         const targetRadians = ((360 - targetAngle) * Math.PI) / 180;
-        
-        // Целевая точка — край круга
         const targetX = centerX + circleRadius * Math.cos(targetRadians);
         const targetY = centerY + circleRadius * Math.sin(targetRadians);
-        
-        // Начальная точка — за пределами круга
-        spawnDistance = calculateSpawnDistance();
+
+        const spawnDistance = 3; // 300% радиуса
         const spawnX = centerX + circleRadius * spawnDistance * Math.cos(targetRadians);
         const spawnY = centerY + circleRadius * spawnDistance * Math.sin(targetRadians);
-        
-        // Смещения относительно центра экрана
+
         const offsetX = spawnX - window.innerWidth / 2;
         const offsetY = spawnY - window.innerHeight / 2;
-        
-        // Устанавливаем начальную позицию через transform
+
+        // Инициализация стилей
         element.style.position = 'fixed';
         element.style.left = '50%';
         element.style.top = '50%';
         element.style.transform = `translate(${offsetX}px, ${offsetY}px) translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
         element.style.transformOrigin = 'center';
-        
-        // Добавляем в DOM
-        document.body.appendChild(element);
-        
-        // Запускаем анимацию через transform
+        element.style.opacity = '1';
+        element.style.pointerEvents = 'none';
+        element.style.zIndex = '10';
+
+        // Добавляем в DOM, если ещё не добавлен
+        if (!element.parentNode) {
+            document.body.appendChild(element);
+        }
+
+        // Анимация через transform
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                // Переход по transform (производительнее)
-                element.style.transition = `transform ${flightTime}s linear`;
-                
+                element.style.transition = `transform ${flightTime}s linear, opacity ${flightTime}s linear`;
+
                 const targetOffsetX = targetX - window.innerWidth / 2;
                 const targetOffsetY = targetY - window.innerHeight / 2;
-                
+
                 element.style.transform = `translate(${targetOffsetX}px, ${targetOffsetY}px) translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
+                element.style.opacity = '0';
             });
         });
 
-        // Возвращаем функцию для отмены анимации
+        // Возвращаем функцию отмены (в нашем случае — просто возврат в пул)
         return () => {
             if (element.parentNode) {
-                element.parentNode.removeChild(element);
+                // Не удаляем, а просто скрываем и возвращаем в пул
+                element.style.transition = 'none';
+                element.style.opacity = '0';
+                // Оставляем в DOM, но неактивный
             }
         };
     }
@@ -114,61 +113,61 @@
     let angle: number = 0;
     function handleLeftClick(e: MouseEvent) {
         if (!square) return;
-        
+
         const transitionTime = 0.5;
         square.style.transition = `left ${transitionTime}s linear`;
         square.style.left = square.style.left === '90%' ? '0%' : '90%';
 
-        // if (angle >= 360) angle = 0;
-        // spawnSquare(angle);
-        // angle += 30;
-    for (let i=0; i<80;i++){
-    if (angle >= 360) angle = 0;
-    ((currentAngle) => {
-        setTimeout(()=>spawnSquare(currentAngle),i*30);
-    })(angle);
-    angle += 3;
-}
+        // Спавн 80 квадратиков с задержкой
+        for (let i = 0; i < 80; i++) {
+            const currentAngle = angle % 360;
+            ((currentAngle) => {
+                setTimeout(() => spawnSquare(currentAngle), i * 30);
+            })(currentAngle);
+            angle += 3;
+        }
     }
 
-    // Функция для спавна квадратика
-    function spawnSquare(targetAngle: number) {
-        const squareElement = document.createElement('div');
-        squareElement.className = 'flying-square';
-        squareElement.style.width = `8vh`;
-        squareElement.style.height = `5vh`;
-        squareElement.style.backgroundColor = 'white';
-        squareElement.style.borderRadius = '0.3vh';
-        squareElement.style.boxShadow = '0 0 0.5vh rgba(255, 255, 255, 0.5)';
-        squareElement.style.zIndex = '10';
-        squareElement.style.pointerEvents = 'none'; // чтобы не мешал кликам
-        
-        const creationTime = performance.now();
-        const id = elementId++;
-        
-        const cancelAnimation = animateElement(
-            squareElement, 
-            targetAngle,
-            () => {
-                console.log(`Элемент ${id} достиг цели`);
+    // Получение свободного элемента из пула
+    function getPooledElement(): PooledElement | null {
+        for (let i = 0; i < pool.length; i++) {
+            if (!pool[i].active) {
+                pool[i].active = true;
+                return pool[i];
             }
-        );
-        
-        activeElements.push({
-            id,
-            element: squareElement,
-            creationTime
+        }
+        // Если нет свободных — можно расширить пул (опционально)
+        console.warn('Pool exhausted!');
+        return null;
+    }
+
+    // Возврат элемента в пул
+    function returnToPool(id: number) {
+        const item = pool.find(p => p.id === id);
+        if (item) {
+            item.active = false;
+            // Сброс transition, чтобы не мешал
+            item.element.style.transition = 'none';
+            item.element.style.opacity = '0';
+        }
+    }
+
+    // Спавн квадратика
+    function spawnSquare(targetAngle: number) {
+        const pooled = getPooledElement();
+        if (!pooled) return;
+
+        const element = pooled.element;
+        const id = pooled.id;
+
+        // Анимация
+        animateElement(element, targetAngle, () => {
+            console.log(`Квадратик ${id} достиг цели`);
         });
 
+        // Автоматический возврат в пул после окончания полёта
         setTimeout(() => {
-            const removalTime = performance.now();
-            const lifetime = removalTime - creationTime;
-
-            console.log(`Элемент ${id} удален в: ${removalTime.toFixed(2)}ms`);
-            console.log(`Время жизни элемента ${id}: ${lifetime.toFixed(2)}ms`);
-
-            cancelAnimation();
-            activeElements = activeElements.filter(el => el.id !== id);
+            returnToPool(id);
         }, flightTime * 1000);
     }
 
@@ -180,12 +179,41 @@
 
     onMount(() => {
         updateGameAreaSize();
-        spawnDistance = calculateSpawnDistance();
-        
+
+        // Создание пула
+        for (let i = 0; i < POOL_SIZE; i++) {
+            const div = document.createElement('div');
+            div.className = 'flying-square pooled-square';
+            div.style.cssText = `
+                width: 8vh;
+                height: 5vh;
+                background-color: white;
+                border-radius: 0.3vh;
+                box-shadow: 0 0 0.5vh rgba(255, 255, 255, 0.5);
+                position: fixed;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                opacity: 0;
+                pointer-events: none;
+                z-index: 10;
+                transition: none;
+            `;
+            document.body.appendChild(div);
+
+            pool.push({
+                element: div,
+                active: false,
+                id: i
+            });
+        }
+
+        // Обработчики
         document.addEventListener('mousemove', rotateContainer);
         document.addEventListener('click', handleLeftClick);
         window.addEventListener('resize', updateGameAreaSize);
 
+        // Глобальные отладочные функции
         (window as any).spawnSquare = spawnSquare;
         (window as any).testSpawn = testSpawnCircle;
 
@@ -193,11 +221,14 @@
             document.removeEventListener('mousemove', rotateContainer);
             document.removeEventListener('click', handleLeftClick);
             window.removeEventListener('resize', updateGameAreaSize);
-            activeElements.forEach(el => {
-                if (el.element.parentNode) {
-                    el.element.parentNode.removeChild(el.element);
+
+            // Удаляем все из пула
+            pool.forEach(p => {
+                if (p.element.parentNode) {
+                    p.element.parentNode.removeChild(p.element);
                 }
             });
+
             delete (window as any).spawnSquare;
             delete (window as any).testSpawn;
         };
@@ -270,5 +301,10 @@
         display: flex;
         justify-content: center;
         align-items: center;
+    }
+
+    /* Стили для пуловых квадратиков — не нужны в компоненте, но можно добавить */
+    .pooled-square {
+        will-change: transform, opacity;
     }
 </style>
