@@ -35,11 +35,10 @@
 
     // Функция для расчета spawnDistance
     function calculateSpawnDistance(): number {
-        // Используем фиксированное расстояние от края круга
-        return 3; // 120% от радиуса круга
+        return 3; // 300% от радиуса (достаточно далеко за пределами круга)
     }
 
-    // Универсальная функция для анимации элемента
+    // Универсальная функция для анимации элемента с использованием transform
     function animateElement(
         element: HTMLDivElement, 
         targetAngle: number, 
@@ -47,51 +46,47 @@
     ): () => void {
         updateGameAreaSize();
         
-        // Центр игровой области (относительно viewport)
         const circleElement = document.querySelector('.circle') as HTMLElement;
         const circleRect = circleElement.getBoundingClientRect();
         const centerX = circleRect.left + circleRect.width / 2;
         const centerY = circleRect.top + circleRect.height / 2;
         
-        // Вычисляем конечную позицию (точка на краю круга)
+        // Угол в радианах (Svelte использует 0° справа, по часовой стрелке)
         const targetRadians = ((360 - targetAngle) * Math.PI) / 180;
+        
+        // Целевая точка — край круга
         const targetX = centerX + circleRadius * Math.cos(targetRadians);
         const targetY = centerY + circleRadius * Math.sin(targetRadians);
         
-        // Рассчитываем spawnDistance
+        // Начальная точка — за пределами круга
         spawnDistance = calculateSpawnDistance();
-        
-        // Вычисляем начальную позицию (вне круга)
         const spawnX = centerX + circleRadius * spawnDistance * Math.cos(targetRadians);
         const spawnY = centerY + circleRadius * spawnDistance * Math.sin(targetRadians);
         
-        // Рассчитываем фактическое расстояние, которое пролетит элемент
-        const distance = Math.sqrt(
-            Math.pow(targetX - spawnX, 2) + Math.pow(targetY - spawnY, 2)
-        );
+        // Смещения относительно центра экрана
+        const offsetX = spawnX - window.innerWidth / 2;
+        const offsetY = spawnY - window.innerHeight / 2;
         
-        // Рассчитываем требуемую скорость (пикселей в секунду)
-        const requiredSpeed = distance / flightTime;
-        
-        console.log(`Игровая область: ${gameAreaWidth}x${gameAreaHeight}, Расстояние: ${distance.toFixed(2)}px, Скорость: ${requiredSpeed.toFixed(2)}px/сек`);
-        
-        // Устанавливаем начальную позицию
+        // Устанавливаем начальную позицию через transform
         element.style.position = 'fixed';
-        element.style.left = `${spawnX}px`;
-        element.style.top = `${spawnY}px`;
-        element.style.transform = 'translate(-50%, -50%)';
+        element.style.left = '50%';
+        element.style.top = '50%';
+        element.style.transform = `translate(${offsetX}px, ${offsetY}px) translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
+        element.style.transformOrigin = 'center';
         
-        // Добавляем на страницу
+        // Добавляем в DOM
         document.body.appendChild(element);
         
-        element.style.transform = `translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
-        
-        // Анимируем элемент к целевой позиции
+        // Запускаем анимацию через transform
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                element.style.transition = `all ${flightTime}s linear`;
-                element.style.left = `${targetX}px`;
-                element.style.top = `${targetY}px`;
+                // Переход по transform (производительнее)
+                element.style.transition = `transform ${flightTime}s linear`;
+                
+                const targetOffsetX = targetX - window.innerWidth / 2;
+                const targetOffsetY = targetY - window.innerHeight / 2;
+                
+                element.style.transform = `translate(${targetOffsetX}px, ${targetOffsetY}px) translate(-50%, -50%) rotate(${-targetAngle - 90}deg)`;
             });
         });
 
@@ -124,14 +119,20 @@
         square.style.transition = `left ${transitionTime}s linear`;
         square.style.left = square.style.left === '90%' ? '0%' : '90%';
 
-        if (angle >= 360) angle = 0;
-        spawnSquare(angle);
-        angle += 30;
+        // if (angle >= 360) angle = 0;
+        // spawnSquare(angle);
+        // angle += 30;
+    for (let i=0; i<80;i++){
+    if (angle >= 360) angle = 0;
+    ((currentAngle) => {
+        setTimeout(()=>spawnSquare(currentAngle),i*30);
+    })(angle);
+    angle += 3;
+}
     }
 
     // Функция для спавна квадратика
     function spawnSquare(targetAngle: number) {
-        // Создаем элемент квадратика
         const squareElement = document.createElement('div');
         squareElement.className = 'flying-square';
         squareElement.style.width = `8vh`;
@@ -140,12 +141,11 @@
         squareElement.style.borderRadius = '0.3vh';
         squareElement.style.boxShadow = '0 0 0.5vh rgba(255, 255, 255, 0.5)';
         squareElement.style.zIndex = '10';
+        squareElement.style.pointerEvents = 'none'; // чтобы не мешал кликам
         
-        // Записываем время создания
         const creationTime = performance.now();
         const id = elementId++;
         
-        // Анимируем элемент
         const cancelAnimation = animateElement(
             squareElement, 
             targetAngle,
@@ -154,14 +154,12 @@
             }
         );
         
-        // Добавляем в массив активных элементов
         activeElements.push({
             id,
             element: squareElement,
             creationTime
         });
 
-        // Удаляем после завершения анимации
         setTimeout(() => {
             const removalTime = performance.now();
             const lifetime = removalTime - creationTime;
@@ -174,7 +172,6 @@
         }, flightTime * 1000);
     }
 
-    // Функция для тестирования
     function testSpawnCircle() {
         for (let i = 0; i < 360; i += 30) {
             setTimeout(() => spawnSquare(i), i * 10);
@@ -182,22 +179,16 @@
     }
 
     onMount(() => {
-        // Инициализируем размеры игровой области
         updateGameAreaSize();
         spawnDistance = calculateSpawnDistance();
         
-        // Добавляем обработчики событий
         document.addEventListener('mousemove', rotateContainer);
         document.addEventListener('click', handleLeftClick);
-
-        // Обновляем размеры при изменении размера окна
         window.addEventListener('resize', updateGameAreaSize);
 
-        // Экспортируем функции
         (window as any).spawnSquare = spawnSquare;
         (window as any).testSpawn = testSpawnCircle;
 
-        // Очистка при размонтировании
         return () => {
             document.removeEventListener('mousemove', rotateContainer);
             document.removeEventListener('click', handleLeftClick);
@@ -213,7 +204,6 @@
     });
 </script>
 
-<!-- Остальная часть компонента без изменений -->
 <svelte:head>
     <title>Rhythm Game</title>
 </svelte:head>
@@ -252,12 +242,12 @@
         height: 8vh;
         position: relative;
         background-color: #333;
-        border: 0.2vh solid #555; /* Используем vh вместо px */
-        border-left: 0.2vh dotted #555; /* Используем vh вместо px */
+        border: 0.2vh solid #555;
+        border-left: 0.2vh dotted #555;
         overflow: hidden;
         transform-origin: center center;
-        border-radius: 1.7vh; /* Адаптируем border-radius */
-        box-shadow: 0 0.4vh 1.5vh rgba(0, 0, 0, 0.3); /* Адаптируем тень */
+        border-radius: 1.7vh;
+        box-shadow: 0 0.4vh 1.5vh rgba(0, 0, 0, 0.3);
     }
 
     .square {
